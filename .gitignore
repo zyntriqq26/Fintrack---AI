@@ -1,0 +1,67 @@
+# ─── Python ─────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+
+# ─── Virtual Environment ───────────────────────────────────────────────
+venv/
+env/
+ENV/
+.venv
+env.bak/
+venv.bak/
+
+# ─── Database (YOUR PERSONAL FINANCIAL DATA) ──────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+!data/.gitkeep
+
+# ─── Environment Variables ────────────────────────────────────────────
+.env
+.env.local
+.env.production
+
+# ─── Flask ─────────────────────────────────────────────────────────────
+instance/
+.webassets-cache
+.flaskenv
+
+# ─── Reports (Generated PDFs) ──────────────────────────────────────────
+reports/*.pdf
+reports/*.txt
+!reports/.gitkeep
+
+# ─── IDE ───────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.iml
+
+# ─── OS ─────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Testing / Coverage ────────────────────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# ─── Logs ──────────────────────────────────────────────────────────────
+*.log
+logs/
