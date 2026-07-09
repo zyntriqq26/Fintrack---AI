@@ -488,4 +488,3 @@ def chat_with_ai(message: str, df: pd.DataFrame) -> str:
     # Default
     else:
         return f"Here's your financial snapshot:\n💰 Income: ₹{total_income:,.0f}\n💸 Expenses: ₹{total_expense:,.0f}\n🏦 Savings: ₹{savings:,.0f} ({savings_rate:.1f}%)\n📝 Total Transactions: {total_txns}\n\nTry asking: 'How much did I spend?', 'Give me savings tips', or 'Budget advice'."
- 
