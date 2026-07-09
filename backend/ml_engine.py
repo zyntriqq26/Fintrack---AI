@@ -390,105 +390,102 @@ def get_spending_insights(df: pd.DataFrame) -> dict:
 
 # ─── 5. AI Finance Chatbot ─────────────────────────────────────────────────────
 
-# def chat_with_ai(message: str, df: pd.DataFrame) -> str:
-#     """Rule-based AI chatbot with financial context awareness."""
-#     msg = message.lower().strip()
-    
-#     # Build financial context
-#     if not df.empty:
-#         df["date"] = pd.to_datetime(df["date"])
-#         now = datetime.now()
-#         month_start = now.replace(day=1)
-        
-#         # Get this month's transactions
-#         monthly_exp = df[(df["type"] == "expense") & (df["date"] >= month_start)]["amount"]
-#         monthly_inc = df[(df["type"] == "income") & (df["date"] >= month_start)]["amount"]
-        
-#         total_expense = monthly_exp.sum()
-#         total_income = monthly_inc.sum()
-#         savings = total_income - total_expense
-#         savings_rate = (savings / total_income * 100) if total_income > 0 else 0
-        
-#         # Get category spending
-#         cat_spend = df[(df["type"] == "expense") & (df["date"] >= month_start)]\
-#             .groupby("category")["amount"].sum().sort_values(ascending=False)
-#         top_category = cat_spend.index[0] if not cat_spend.empty else "N/A"
-#         top_amount = cat_spend.iloc[0] if not cat_spend.empty else 0
-        
-#         # Get total transactions count
-#         total_txns = len(df)
-        
-#     else:
-#         total_expense = total_income = savings = savings_rate = 0
-#         top_category = "N/A"
-#         top_amount = 0
-#         total_txns = 0
-    
-#     # ── Intent matching ──
-    
-#     # Spending summary
-#     if any(w in msg for w in ["spend", "spent", "expense", "how much", "total"]):
-#         if "category" in msg or any(cat.lower() in msg for cat in cat_spend.index if not df.empty):
-#             for cat in (cat_spend.index if not df.empty else []):
-#                 if cat.lower() in msg:
-#                     return f"You've spent ₹{cat_spend[cat]:,.0f} on {cat} this month. That's {cat_spend[cat]/total_expense*100:.1f}% of your total expenses."
-#         return f"This month you've spent ₹{total_expense:,.2f} in total. Your highest spending category is {top_category} at ₹{top_amount:,.0f}."
-    
-#     # Savings queries
-#     elif any(w in msg for w in ["sav", "saving", "save money"]):
-#         if savings > 0:
-#             return f"You've saved ₹{savings:,.2f} this month — a {savings_rate:.1f}% savings rate. The recommended rate is 20%. " + ("You're doing great! 🎉" if savings_rate >= 20 else f"Try to increase savings by ₹{(total_income*0.2-savings):,.0f} more.")
-#         else:
-#             return f"This month you're overspending by ₹{abs(savings):,.0f}. Cut discretionary spending in {top_category} to get back on track."
-    
-#     # Income queries
-#     elif any(w in msg for w in ["income", "earn", "salary"]):
-#         return f"Your total income this month is ₹{total_income:,.2f}."
-    
-#     # Budget advice
-#     elif any(w in msg for w in ["budget", "plan", "allocat"]):
-#         needs = total_income * 0.50
-#         wants = total_income * 0.30
-#         savings_goal = total_income * 0.20
-#         return f"Based on your income of ₹{total_income:,.0f}, the 50-30-20 budget rule suggests:\n• Needs (rent, food, utilities): ₹{needs:,.0f}\n• Wants (entertainment, shopping): ₹{wants:,.0f}\n• Savings & investments: ₹{savings_goal:,.0f}"
-    
-#     # Investment advice
-#     elif any(w in msg for w in ["invest", "mutual fund", "sip", "stock", "fd"]):
-#         return "Here are some investment options for beginners:\n• SIP in Mutual Funds: Start from ₹500/month (ELSS for tax saving)\n• PPF: Safe long-term investment with tax benefits (15-year lock-in)\n• Fixed Deposits: 6-7% interest, ideal for emergency fund\n• Index Funds: Low-cost, market-tracking investments\n• NPS: National Pension System for retirement planning\n\n⚠️ This is general info, not financial advice. Consult a SEBI-registered advisor."
-    
-#     # EMI / loan
-#     elif any(w in msg for w in ["emi", "loan", "debt", "credit"]):
-#         return f"Managing debt effectively:\n• Keep EMIs under 40% of monthly income\n• Always pay credit card bill in full to avoid 36-48% interest\n• Use the avalanche method: pay highest interest debt first\n• Avoid taking loans for depreciating assets like gadgets\n• With your income of ₹{total_income:,.0f}, max safe EMI is ₹{total_income*0.4:,.0f}"
-    
-#     # Tax
-#     elif any(w in msg for w in ["tax", "itr", "deduction"]):
-#         return "Tax-saving tips (India):\n• Section 80C: Save up to ₹1.5L via ELSS, PPF, LIC, ULIP, home loan principal\n• Section 80D: Health insurance premium deduction up to ₹25,000\n• HRA exemption: If paying rent, claim HRA\n• Section 80CCC: NPS contribution up to ₹50,000 extra\n• File ITR by July 31 every year to avoid penalties"
-    
-#     # Emergency fund
-#     elif any(w in msg for w in ["emergency", "fund", "backup"]):
-#         target = total_expense * 6
-#         return f"Emergency fund target: 6 months of expenses = ₹{target:,.0f}. Keep this in a high-yield savings account or liquid mutual fund. Start by saving 5% of income (₹{total_income*0.05:,.0f}/month) until you reach the target."
-    
-#     # Greeting
-#     elif any(w in msg for w in ["hello", "hi", "hey", "namaste", "hii"]):
-#         return f"Hello! 👋 I'm your FinTrack AI assistant.\n\n📊 Your current financial snapshot:\n💰 Income: ₹{total_income:,.0f}\n💸 Expenses: ₹{total_expense:,.0f}\n🏦 Savings: ₹{savings:,.0f} ({savings_rate:.1f}%)\n📝 Total Transactions: {total_txns}\n\nI can help you with:\n• Spending summaries and analysis\n• Savings tips and recommendations\n• Budget planning (50-30-20 rule)\n• Investment advice\n• Tax-saving strategies\n\nWhat would you like to know about your finances?"
-    
-#     # Help
-#     elif any(w in msg for w in ["help", "what can", "feature"]):
-#         return "I can answer questions like:\n• 'How much did I spend this month?'\n• 'What are my savings?'\n• 'Give me budget advice'\n• 'How should I invest my money?'\n• 'How can I save on taxes?'\n• 'What is my top spending category?'\n• 'How do I build an emergency fund?'"
-    
-#     # Top spending category
-#     elif any(w in msg for w in ["top", "highest", "most", "biggest"]):
-#         return f"Your highest spending category this month is {top_category} at ₹{top_amount:,.0f} ({top_amount/total_expense*100:.1f}% of expenses)."
-    
-#     # Transactions count
-#     elif any(w in msg for w in ["transaction", "entries", "records"]):
-#         return f"You have {total_txns} total transactions in your database. This month you've made {len(df[df['date'] >= month_start])} transactions."
-    
-#     # Default
-#     else:
-#         return f"Here's your financial snapshot:\n💰 Income: ₹{total_income:,.0f}\n💸 Expenses: ₹{total_expense:,.0f}\n🏦 Savings: ₹{savings:,.0f} ({savings_rate:.1f}%)\n📝 Total Transactions: {total_txns}\n\nTry asking: 'How much did I spend?', 'Give me savings tips', or 'Budget advice'."
-
 def chat_with_ai(message: str, df: pd.DataFrame) -> str:
-    """AI Chatbot - Returns a generic response for all messages"""
-    return "🚀 This feature is coming soon! We're working hard to bring you an amazing AI assistant. Stay tuned! 🎉"
+    """Rule-based AI chatbot with financial context awareness."""
+    msg = message.lower().strip()
+    
+    # Build financial context
+    if not df.empty:
+        df["date"] = pd.to_datetime(df["date"])
+        now = datetime.now()
+        month_start = now.replace(day=1)
+        
+        # Get this month's transactions
+        monthly_exp = df[(df["type"] == "expense") & (df["date"] >= month_start)]["amount"]
+        monthly_inc = df[(df["type"] == "income") & (df["date"] >= month_start)]["amount"]
+        
+        total_expense = monthly_exp.sum()
+        total_income = monthly_inc.sum()
+        savings = total_income - total_expense
+        savings_rate = (savings / total_income * 100) if total_income > 0 else 0
+        
+        # Get category spending
+        cat_spend = df[(df["type"] == "expense") & (df["date"] >= month_start)]\
+            .groupby("category")["amount"].sum().sort_values(ascending=False)
+        top_category = cat_spend.index[0] if not cat_spend.empty else "N/A"
+        top_amount = cat_spend.iloc[0] if not cat_spend.empty else 0
+        
+        # Get total transactions count
+        total_txns = len(df)
+        
+    else:
+        total_expense = total_income = savings = savings_rate = 0
+        top_category = "N/A"
+        top_amount = 0
+        total_txns = 0
+    
+    # ── Intent matching ──
+    
+    # Spending summary
+    if any(w in msg for w in ["spend", "spent", "expense", "how much", "total"]):
+        if "category" in msg or any(cat.lower() in msg for cat in cat_spend.index if not df.empty):
+            for cat in (cat_spend.index if not df.empty else []):
+                if cat.lower() in msg:
+                    return f"You've spent ₹{cat_spend[cat]:,.0f} on {cat} this month. That's {cat_spend[cat]/total_expense*100:.1f}% of your total expenses."
+        return f"This month you've spent ₹{total_expense:,.2f} in total. Your highest spending category is {top_category} at ₹{top_amount:,.0f}."
+    
+    # Savings queries
+    elif any(w in msg for w in ["sav", "saving", "save money"]):
+        if savings > 0:
+            return f"You've saved ₹{savings:,.2f} this month — a {savings_rate:.1f}% savings rate. The recommended rate is 20%. " + ("You're doing great! 🎉" if savings_rate >= 20 else f"Try to increase savings by ₹{(total_income*0.2-savings):,.0f} more.")
+        else:
+            return f"This month you're overspending by ₹{abs(savings):,.0f}. Cut discretionary spending in {top_category} to get back on track."
+    
+    # Income queries
+    elif any(w in msg for w in ["income", "earn", "salary"]):
+        return f"Your total income this month is ₹{total_income:,.2f}."
+    
+    # Budget advice
+    elif any(w in msg for w in ["budget", "plan", "allocat"]):
+        needs = total_income * 0.50
+        wants = total_income * 0.30
+        savings_goal = total_income * 0.20
+        return f"Based on your income of ₹{total_income:,.0f}, the 50-30-20 budget rule suggests:\n• Needs (rent, food, utilities): ₹{needs:,.0f}\n• Wants (entertainment, shopping): ₹{wants:,.0f}\n• Savings & investments: ₹{savings_goal:,.0f}"
+    
+    # Investment advice
+    elif any(w in msg for w in ["invest", "mutual fund", "sip", "stock", "fd"]):
+        return "Here are some investment options for beginners:\n• SIP in Mutual Funds: Start from ₹500/month (ELSS for tax saving)\n• PPF: Safe long-term investment with tax benefits (15-year lock-in)\n• Fixed Deposits: 6-7% interest, ideal for emergency fund\n• Index Funds: Low-cost, market-tracking investments\n• NPS: National Pension System for retirement planning\n\n⚠️ This is general info, not financial advice. Consult a SEBI-registered advisor."
+    
+    # EMI / loan
+    elif any(w in msg for w in ["emi", "loan", "debt", "credit"]):
+        return f"Managing debt effectively:\n• Keep EMIs under 40% of monthly income\n• Always pay credit card bill in full to avoid 36-48% interest\n• Use the avalanche method: pay highest interest debt first\n• Avoid taking loans for depreciating assets like gadgets\n• With your income of ₹{total_income:,.0f}, max safe EMI is ₹{total_income*0.4:,.0f}"
+    
+    # Tax
+    elif any(w in msg for w in ["tax", "itr", "deduction"]):
+        return "Tax-saving tips (India):\n• Section 80C: Save up to ₹1.5L via ELSS, PPF, LIC, ULIP, home loan principal\n• Section 80D: Health insurance premium deduction up to ₹25,000\n• HRA exemption: If paying rent, claim HRA\n• Section 80CCC: NPS contribution up to ₹50,000 extra\n• File ITR by July 31 every year to avoid penalties"
+    
+    # Emergency fund
+    elif any(w in msg for w in ["emergency", "fund", "backup"]):
+        target = total_expense * 6
+        return f"Emergency fund target: 6 months of expenses = ₹{target:,.0f}. Keep this in a high-yield savings account or liquid mutual fund. Start by saving 5% of income (₹{total_income*0.05:,.0f}/month) until you reach the target."
+    
+    # Greeting
+    elif any(w in msg for w in ["hello", "hi", "hey", "namaste", "hii"]):
+        return f"Hello! 👋 I'm your FinTrack AI assistant.\n\n📊 Your current financial snapshot:\n💰 Income: ₹{total_income:,.0f}\n💸 Expenses: ₹{total_expense:,.0f}\n🏦 Savings: ₹{savings:,.0f} ({savings_rate:.1f}%)\n📝 Total Transactions: {total_txns}\n\nI can help you with:\n• Spending summaries and analysis\n• Savings tips and recommendations\n• Budget planning (50-30-20 rule)\n• Investment advice\n• Tax-saving strategies\n\nWhat would you like to know about your finances?"
+    
+    # Help
+    elif any(w in msg for w in ["help", "what can", "feature"]):
+        return "I can answer questions like:\n• 'How much did I spend this month?'\n• 'What are my savings?'\n• 'Give me budget advice'\n• 'How should I invest my money?'\n• 'How can I save on taxes?'\n• 'What is my top spending category?'\n• 'How do I build an emergency fund?'"
+    
+    # Top spending category
+    elif any(w in msg for w in ["top", "highest", "most", "biggest"]):
+        return f"Your highest spending category this month is {top_category} at ₹{top_amount:,.0f} ({top_amount/total_expense*100:.1f}% of expenses)."
+    
+    # Transactions count
+    elif any(w in msg for w in ["transaction", "entries", "records"]):
+        return f"You have {total_txns} total transactions in your database. This month you've made {len(df[df['date'] >= month_start])} transactions."
+    
+    # Default
+    else:
+        return f"Here's your financial snapshot:\n💰 Income: ₹{total_income:,.0f}\n💸 Expenses: ₹{total_expense:,.0f}\n🏦 Savings: ₹{savings:,.0f} ({savings_rate:.1f}%)\n📝 Total Transactions: {total_txns}\n\nTry asking: 'How much did I spend?', 'Give me savings tips', or 'Budget advice'."
+
