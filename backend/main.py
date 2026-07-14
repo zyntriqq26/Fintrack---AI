@@ -6,11 +6,9 @@ Main Flask Application
 from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
 import sqlite3
-import json
 import os
 from datetime import datetime, timedelta
 import pandas as pd
-import numpy as np
 from ml_engine import (
     categorize_transaction,
     predict_future_expenses,
@@ -158,7 +156,6 @@ def dashboard():
 
     now = datetime.now()
     month_start = now.replace(day=1).strftime("%Y-%m-%d")
-    month_end = now.strftime("%Y-%m-%d")
 
     # This month totals
     c.execute("SELECT SUM(amount) FROM transactions WHERE type='income' AND date >= ?", (month_start,))
@@ -452,6 +449,5 @@ def list_reports():
 @app.route('/reports/<filename>')
 def download_report(filename):
     """Download a report file"""
-    import os
     from flask import send_from_directory
     return send_from_directory('reports', filename)
