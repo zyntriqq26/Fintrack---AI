@@ -65,69 +65,69 @@ def init_db():
     conn.close()
 
 
-# def _seed_sample_data(c):
-#     """Insert realistic sample transactions for demo."""
-#     import random
-#     random.seed(42)
+def _seed_sample_data(c):
+    """Insert realistic sample transactions for demo."""
+    import random
+    random.seed(42)
 
-#     categories = {
-#         "Food & Dining": ["Zomato Order", "McDonald's", "Swiggy", "Local Restaurant", "Cafe Coffee Day", "Domino's Pizza"],
-#         "Shopping": ["Amazon Purchase", "Flipkart Order", "Myntra", "Local Market", "Big Bazaar"],
-#         "Transportation": ["Ola Cab", "Uber Ride", "Metro Card Recharge", "Bus Pass", "Petrol"],
-#         "Entertainment": ["Netflix", "Spotify", "Movie Ticket", "BookMyShow", "Prime Video"],
-#         "Utilities": ["Electricity Bill", "Water Bill", "Internet Bill", "Mobile Recharge"],
-#         "Healthcare": ["Pharmacy", "Doctor Consultation", "Lab Test", "Medicine"],
-#         "Education": ["Course Fee", "Books", "Stationery", "Online Course"],
-#     }
+    categories = {
+        "Food & Dining": ["Zomato Order", "McDonald's", "Swiggy", "Local Restaurant", "Cafe Coffee Day", "Domino's Pizza"],
+        "Shopping": ["Amazon Purchase", "Flipkart Order", "Myntra", "Local Market", "Big Bazaar"],
+        "Transportation": ["Ola Cab", "Uber Ride", "Metro Card Recharge", "Bus Pass", "Petrol"],
+        "Entertainment": ["Netflix", "Spotify", "Movie Ticket", "BookMyShow", "Prime Video"],
+        "Utilities": ["Electricity Bill", "Water Bill", "Internet Bill", "Mobile Recharge"],
+        "Healthcare": ["Pharmacy", "Doctor Consultation", "Lab Test", "Medicine"],
+        "Education": ["Course Fee", "Books", "Stationery", "Online Course"],
+    }
 
-#     incomes = [
-#         ("Salary Credit", 45000),
-#         ("Freelance Payment", 8000),
-#         ("Part-time Work", 5000),
-#     ]
+    incomes = [
+        ("Salary Credit", 45000),
+        ("Freelance Payment", 8000),
+        ("Part-time Work", 5000),
+    ]
 
-#     today = datetime.now()
-#     transactions = []
+    today = datetime.now()
+    transactions = []
 
-#     for month_offset in range(6):
-#         base_date = today - timedelta(days=30 * month_offset)
+    for month_offset in range(6):
+        base_date = today - timedelta(days=30 * month_offset)
 
-#         # Monthly income
-#         for desc, base_amount in incomes:
-#             if random.random() > 0.3:
-#                 amt = base_amount + random.randint(-500, 500)
-#                 dt = (base_date.replace(day=1) + timedelta(days=random.randint(0, 5))).strftime("%Y-%m-%d")
-#                 transactions.append((dt, desc, amt, "income", "Income", ""))
+        # Monthly income
+        for desc, base_amount in incomes:
+            if random.random() > 0.3:
+                amt = base_amount + random.randint(-500, 500)
+                dt = (base_date.replace(day=1) + timedelta(days=random.randint(0, 5))).strftime("%Y-%m-%d")
+                transactions.append((dt, desc, amt, "income", "Income", ""))
 
-#         # Monthly expenses
-#         for cat, descs in categories.items():
-#             num_txns = random.randint(2, 6)
-#             for _ in range(num_txns):
-#                 desc = random.choice(descs)
-#                 amt = round(random.uniform(100, 3000), 2)
-#                 day = random.randint(1, 28)
-#                 try:
-#                     dt = base_date.replace(day=day).strftime("%Y-%m-%d")
-#                 except ValueError:
-#                     dt = base_date.strftime("%Y-%m-%d")
-#                 transactions.append((dt, desc, amt, "expense", cat, ""))
+        # Monthly expenses
+        for cat, descs in categories.items():
+            num_txns = random.randint(2, 6)
+            for _ in range(num_txns):
+                desc = random.choice(descs)
+                amt = round(random.uniform(100, 3000), 2)
+                day = random.randint(1, 28)
+                try:
+                    dt = base_date.replace(day=day).strftime("%Y-%m-%d")
+                except ValueError:
+                    dt = base_date.strftime("%Y-%m-%d")
+                transactions.append((dt, desc, amt, "expense", cat, ""))
 
-#     c.executemany(
-#         "INSERT INTO transactions (date, description, amount, type, category, notes) VALUES (?,?,?,?,?,?)",
-#         transactions
-#     )
+    c.executemany(
+        "INSERT INTO transactions (date, description, amount, type, category, notes) VALUES (?,?,?,?,?,?)",
+        transactions
+    )
 
-#     # Seed budgets
-#     budgets = [
-#         ("Food & Dining", 5000),
-#         ("Shopping", 4000),
-#         ("Transportation", 3000),
-#         ("Entertainment", 2000),
-#         ("Utilities", 2500),
-#         ("Healthcare", 1500),
-#         ("Education", 3000),
-#     ]
-#     c.executemany("INSERT OR IGNORE INTO budgets (category, monthly_limit) VALUES (?,?)", budgets)
+    # Seed budgets
+    budgets = [
+        ("Food & Dining", 5000),
+        ("Shopping", 4000),
+        ("Transportation", 3000),
+        ("Entertainment", 2000),
+        ("Utilities", 2500),
+        ("Healthcare", 1500),
+        ("Education", 3000),
+    ]
+    c.executemany("INSERT OR IGNORE INTO budgets (category, monthly_limit) VALUES (?,?)", budgets)
 
 
 def get_db():
