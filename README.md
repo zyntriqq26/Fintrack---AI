@@ -2,6 +2,7 @@
 
 > AI-Powered Personal Finance Manager
 
+this was just a prototype real would be uploading soon 
 FinTrack AI is a web application that helps you track your income, expenses, and savings. It uses intelligent analysis to categorise transactions automatically, predict future spending, provide savings recommendations, and generate professional monthly reports.
 
 ![FinTrack AI Dashboard](https://via.placeholder.com/800x400?text=FinTrack+AI+Dashboard)
