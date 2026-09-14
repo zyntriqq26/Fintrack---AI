@@ -871,3 +871,116 @@
 .anomaly-item small {
     color: var(--gray-500);
 }
+/* ─── AI Risk Assessment Card ─────────────────────────────────────────────── */
+.risk-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow);
+    margin-bottom: 24px;
+}
+
+.risk-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.risk-header h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.risk-month {
+    font-size: 12px;
+    color: var(--gray-400);
+}
+
+.risk-main {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.risk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 22px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+.risk-badge-icon { font-size: 22px; }
+.risk-badge.risk-safe     { background: #D1FAE5; color: #065F46; }
+.risk-badge.risk-high     { background: #FEF3C7; color: #92400E; }
+.risk-badge.risk-worst    { background: #FFEDD5; color: #9A3412; }
+.risk-badge.risk-critical { background: #FEE2E2; color: #991B1B; }
+
+.risk-description {
+    font-size: 14px;
+    color: var(--gray-600);
+    line-height: 1.55;
+    flex: 1;
+    min-width: 220px;
+}
+
+.risk-probas {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.risk-proba-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 60px;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--gray-600);
+}
+
+.risk-proba-label { text-transform: capitalize; font-weight: 500; }
+
+.risk-proba-bar {
+    height: 8px;
+    background: var(--gray-100);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.risk-proba-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+}
+.risk-proba-fill.risk-safe     { background: var(--secondary); }
+.risk-proba-fill.risk-high     { background: var(--warning); }
+.risk-proba-fill.risk-worst    { background: #F97316; }
+.risk-proba-fill.risk-critical { background: var(--danger); }
+
+.risk-proba-value { text-align: right; font-weight: 600; }
+
+.risk-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--gray-400);
+    padding-top: 12px;
+    border-top: 1px solid var(--gray-100);
+}
+
+.risk-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--gray-400);
+    font-size: 13px;
+}

@@ -9,6 +9,9 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 import pandas as pd
+import joblib
+import numpy as np 
+import pandas as pd
 from ml_engine import (
     categorize_transaction,
     predict_future_expenses,
@@ -25,6 +28,22 @@ CORS(app)
 
 DB_PATH = "data/fintrack.db"
 
+#trained model loading
+
+MODEL_PATH="models/final_model_no_ratio.joblib"
+ENCODER_PATH="models/label_encoder.joblib"
+
+
+try:
+    risk_model = joblib.load(MODEL_PATH)
+    label_encoder = joblib.load(ENCODER_PATH)
+    ML_MODEL_LOADED = True
+    print(f"Ml risk model loaded : {type(risk_model).__name__}")
+except Exception as e :
+    risk_model = None
+    label_encoder = None
+    ML_MODEL_LOADED = False
+    print(f"could not load model : {e}") 
 
 # ─── Database Setup ────────────────────────────────────────────────────────────
 
@@ -62,28 +81,52 @@ def init_db():
     """)
     conn.commit()
 
+    #Seed with sample data
+    
+    c.execute("SELECT COUNT(*) FROM transactions")
+    if c.fetchone()[0] ==0:
+        _seed_sample_data(c)
+        conn.commit()
     conn.close()
 
 
 def _seed_sample_data(c):
-    """Insert realistic sample transactions for demo."""
+    """Insert sample transactions scaled to the ML model's training range (USD-scale)."""
     import random
     random.seed(42)
 
     categories = {
-        "Food & Dining": ["Zomato Order", "McDonald's", "Swiggy", "Local Restaurant", "Cafe Coffee Day", "Domino's Pizza"],
-        "Shopping": ["Amazon Purchase", "Flipkart Order", "Myntra", "Local Market", "Big Bazaar"],
-        "Transportation": ["Ola Cab", "Uber Ride", "Metro Card Recharge", "Bus Pass", "Petrol"],
-        "Entertainment": ["Netflix", "Spotify", "Movie Ticket", "BookMyShow", "Prime Video"],
-        "Utilities": ["Electricity Bill", "Water Bill", "Internet Bill", "Mobile Recharge"],
-        "Healthcare": ["Pharmacy", "Doctor Consultation", "Lab Test", "Medicine"],
-        "Education": ["Course Fee", "Books", "Stationery", "Online Course"],
+        "Food & Dining":  ["Door Dash Order", "McDonald's", "Swiggy", "Local Restaurant",
+                           "Cafe Coffee Day", "Domino's Pizza"],
+        "Shopping":       ["Amazon Purchase", "Flipkart Order", "Zara",
+                           "Local Market", "techsqaure"],
+        "Transportation": ["Local bus", "Uber Ride", "Metro Card Recharge",
+                           "Bus Pass", "Petrol"],
+        "Entertainment":  ["Netflix", "Spotify", "Movie Ticket",
+                           "cineplaza", "Prime Video"],
+        "Utilities":      ["Electricity Bill", "Water Bill",
+                           "Internet Bill", "Mobile Recharge"],
+        "Healthcare":     ["Pharmacy", "Doctor Consultation",
+                           "Lab Test", "Medicine"],
+        "Education":      ["Course Fee", "Books", "Stationery", "Online Course"],
     }
 
+    # Monthly target ranges per category — aligned with the ML model's training data
+    category_monthly_target = {
+        "Healthcare":     (60,  180),
+        "Shopping":       (40,  140),
+        "Education":      (80,  180),
+        "Transportation": (140, 260),
+        "Utilities":      (80,  130),
+        "Food & Dining":  (120, 260),
+        "Entertainment":  (100, 240),
+    }
+
+    # Income ranges — also aligned with the model's training data
     incomes = [
-        ("Salary Credit", 45000),
-        ("Freelance Payment", 8000),
-        ("Part-time Work", 5000),
+        ("Salary Credit",     (650, 850)),
+        ("Freelance Payment", (100, 200)),
+        ("Part-time Work",    (50,  120)),
     ]
 
     today = datetime.now()
@@ -92,48 +135,127 @@ def _seed_sample_data(c):
     for month_offset in range(6):
         base_date = today - timedelta(days=30 * month_offset)
 
-        # Monthly income
-        for desc, base_amount in incomes:
-            if random.random() > 0.3:
-                amt = base_amount + random.randint(-500, 500)
-                dt = (base_date.replace(day=1) + timedelta(days=random.randint(0, 5))).strftime("%Y-%m-%d")
+        # Monthly income — each source appears with 80% probability
+        for desc, (lo, hi) in incomes:
+            if random.random() > 0.2:
+                amt = round(random.uniform(lo, hi), 2)
+                dt = (base_date.replace(day=1)
+                      + timedelta(days=random.randint(0, 5))).strftime("%Y-%m-%d")
                 transactions.append((dt, desc, amt, "income", "Income", ""))
 
-        # Monthly expenses
+        # Monthly expenses per category
         for cat, descs in categories.items():
-            num_txns = random.randint(2, 6)
-            for _ in range(num_txns):
+            lo, hi = category_monthly_target[cat]
+            month_total = random.uniform(lo, hi)
+
+            num_txns = random.randint(2, 5)
+
+            # Split the monthly total into num_txns random amounts
+            weights = [random.random() for _ in range(num_txns)]
+            total_w = sum(weights)
+            amounts = [month_total * w / total_w for w in weights]
+
+            for amt in amounts:
                 desc = random.choice(descs)
-                amt = round(random.uniform(100, 3000), 2)
                 day = random.randint(1, 28)
                 try:
                     dt = base_date.replace(day=day).strftime("%Y-%m-%d")
                 except ValueError:
                     dt = base_date.strftime("%Y-%m-%d")
-                transactions.append((dt, desc, amt, "expense", cat, ""))
+                transactions.append((dt, desc, round(amt, 2), "expense", cat, ""))
 
     c.executemany(
-        "INSERT INTO transactions (date, description, amount, type, category, notes) VALUES (?,?,?,?,?,?)",
+        "INSERT INTO transactions (date, description, amount, type, category, notes) "
+        "VALUES (?,?,?,?,?,?)",
         transactions
     )
 
-    # Seed budgets
+    # Seed budgets — scaled to match the new income range
     budgets = [
-        ("Food & Dining", 5000),
-        ("Shopping", 4000),
-        ("Transportation", 3000),
-        ("Entertainment", 2000),
-        ("Utilities", 2500),
-        ("Healthcare", 1500),
-        ("Education", 3000),
+        ("Food & Dining", 250),
+        ("Shopping",       150),
+        ("Transportation", 250),
+        ("Entertainment",  200),
+        ("Utilities",      130),
+        ("Healthcare",     150),
+        ("Education",      200),
     ]
-    c.executemany("INSERT OR IGNORE INTO budgets (category, monthly_limit) VALUES (?,?)", budgets)
-
+    c.executemany(
+        "INSERT OR IGNORE INTO budgets (category, monthly_limit) VALUES (?,?)",
+        budgets
+    )
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+# ─── ML Feature Builder ────────────────────────────────────────────────────────
+
+def build_monthly_features(conn, year_month=None):
+    """
+    Aggregate transactions for a given month (YYYY-MM) into the exact
+    feature set the risk model was trained on.
+    """
+    if year_month is None:
+        year_month = datetime.now().strftime("%Y-%m")
+
+    start_date = f"{year_month}-01"
+    year, month = map(int, year_month.split("-"))
+
+    #case for december  
+    if month == 12:
+        end_date = f"{year + 1}-01-01"
+    else:
+        end_date = f"{year}-{month + 1:02d}-01"
+
+    df = pd.read_sql_query(
+        "SELECT type, amount, category FROM transactions WHERE date >= ? AND date < ?",
+        conn,
+        params=(start_date, end_date)
+    )
+    if df.empty:
+        return None
+
+    income = float(df[df["type"] == "income"]["amount"].sum() or 0)
+
+    # Map app categories → model categories
+    category_map = {
+        "Healthcare":     "healthcare",
+        "Shopping":       "shopping",
+        "Education":      "education",
+        "Transportation": "transport",
+        "Utilities":      "utilities",
+        "Food & Dining":  "food_dining",
+        "Entertainment":  "entertainment",
+    }
+
+    features = {cat: 0.0 for cat in category_map.values()}
+    for _, row in df[df["type"] == "expense"].iterrows():
+        mapped = category_map.get(row["category"])
+        if mapped:
+            features[mapped] += float(row["amount"])
+
+    total_expense = sum(features.values())
+
+    # Demographic defaults (used until we have a real user profile)
+    age, gender, education = 25, "Male", "Graduate"
+
+    row_dict = {
+        "Monthly Income": income,
+        "healthcare":     features["healthcare"],
+        "shopping":       features["shopping"],
+        "education":      features["education"],
+        "transport":      features["transport"],
+        "utilities":      features["utilities"],
+        "food_dining":    features["food_dining"],
+        "entertainment":  features["entertainment"],
+        "total_expense":  total_expense,
+        "Age":            age,
+        "Gender":         gender,
+        "Current educational level": education,
+    }
+    return pd.DataFrame([row_dict])
 
 
 # ─── Routes ────────────────────────────────────────────────────────────────────
@@ -331,6 +453,67 @@ def insights():
     result = get_spending_insights(df)
     return jsonify(result)
 
+@app.route("/api/risk", methods=["GET"])
+def risk_prediction():
+    """Predict the ML risk label for a given month (defaults to current month)."""
+    if not ML_MODEL_LOADED:
+        return jsonify({"error": "Risk model not loaded on server"}), 503
+
+    month = request.args.get("month", datetime.now().strftime("%Y-%m"))
+
+    conn = get_db()
+    try:
+        features_df = build_monthly_features(conn, month)
+    finally:
+        conn.close()
+
+    if features_df is None or features_df.empty:
+        return jsonify({"error": f"No transactions found for {month}"}), 404
+
+    pred_encoded = risk_model.predict(features_df)[0]
+    pred_label = str(label_encoder.inverse_transform([pred_encoded])[0])
+
+    # try:
+    #     proba = risk_model.predict_proba(features_df)[0]
+    #     proba_dict = {
+    #         str(cls): round(float(p), 4)
+    #         for cls, p in zip(label_encoder.classes_, proba)
+    #     }
+    # except Exception:
+    #     proba_dict = {}
+    try:
+        # Get raw logits from the classifier inside the pipeline
+        logits = risk_model.decision_function(features_df)[0]
+
+        # Temperature scaling: divide by T > 1 to soften the distribution
+        T = 4.0
+        scaled = logits / T
+        exp_scaled = np.exp(scaled - np.max(scaled))   # subtract max for numerical stability
+        proba = exp_scaled / exp_scaled.sum()
+
+        proba_dict = {
+            str(cls): round(float(p), 4)
+            for cls, p in zip(label_encoder.classes_, proba)
+            }
+    except Exception:
+        proba_dict = {}
+
+    descriptions = {
+        "safe":     "Your spending is well within your income. Great job!",
+        "high":     "Your expenses are getting high relative to income. Watch out.",
+        "worst":    "Your expenses exceed your income. Consider cutting non-essential spend.",
+        "critical": "Critical: you're spending far more than you earn. Immediate action needed."
+    }
+
+    return jsonify({
+        "month":         month,
+        "risk_label":    pred_label,
+        "description":   descriptions.get(pred_label, ""),
+        "probabilities": proba_dict,
+        "features":      features_df.to_dict(orient="records")[0],
+        "model":         type(risk_model).__name__,
+    })
+
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
@@ -416,15 +599,6 @@ def get_categories():
     return jsonify(categories)
 
 
-if __name__ == "__main__":
-    init_db()
-    print("\n" + "="*55)
-    print("  🚀  FinTrack AI — Personal Finance Manager")
-    print("="*55)
-    print("  Running at: http://127.0.0.1:5000")
-    print("="*55 + "\n")
-    app.run(debug=True, port=5000)
-
 @app.route("/reports")
 def list_reports():
     """List all generated reports"""
@@ -445,3 +619,13 @@ def download_report(filename):
     """Download a report file"""
     from flask import send_from_directory
     return send_from_directory('reports', filename)
+
+
+if __name__ == "__main__":
+    init_db()
+    print("\n" + "="*55)
+    print("  🚀  FinTrack AI — Personal Finance Manager")
+    print("="*55)
+    print("  Running at: http://127.0.0.1:5000")
+    print("="*55 + "\n")
+    app.run(debug=True, port=5000)

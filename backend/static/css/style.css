@@ -654,3 +654,10 @@ body.dark-theme .budget-card-amounts {
 body.dark-theme .budget-card-footer {
     color: #94A3B8 !important;
 }
+
+body.dark-theme .risk-badge.risk-safe     { background: rgba(16, 185, 129, 0.15); color: #34D399; }
+body.dark-theme .risk-badge.risk-high     { background: rgba(245, 158, 11, 0.15); color: #FBBF24; }
+body.dark-theme .risk-badge.risk-worst    { background: rgba(249, 115, 22, 0.15); color: #FB923C; }
+body.dark-theme .risk-badge.risk-critical { background: rgba(239, 68, 68, 0.15); color: #F87171; }
+body.dark-theme .risk-proba-bar           { background: #334155; }
+body.dark-theme .risk-footer              { border-top-color: #334155; }
