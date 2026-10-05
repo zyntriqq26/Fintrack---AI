@@ -22,6 +22,25 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
 </head>
 <body>
+
+<script>
+// Fetch current user info from /api/me
+(async function loadUser() {
+  try {
+    const res = await fetch('/api/me');
+    if (!res.ok) return;
+    const user = await res.json();
+    document.getElementById('user-name').textContent = user.full_name;
+    document.getElementById('user-avatar').textContent =
+      user.full_name.charAt(0).toUpperCase();
+  } catch (e) { console.error('User load failed:', e); }
+})();
+
+// On first load, if the user has no data, seed sample data
+(async function seedIfEmpty() {
+  try { await fetch('/api/seed', { method: 'POST' }); } catch (e) {}
+})();
+</script>
     <!-- Sidebar Navigation -->
     <nav class="sidebar" id="sidebar">
         <div class="sidebar-brand">
@@ -70,13 +89,44 @@
             </button>
             <h1 class="page-title" id="pageTitle">Dashboard</h1>
             <div class="top-bar-actions">
-                <button class="btn btn-primary btn-sm" id="addTransactionBtn">
-                    <i class="fas fa-plus"></i> <span>Add Transaction</span>
-                </button>
-                <div class="user-avatar" id="profileBtn" style="cursor:pointer;">
-                    <span>👤</span>
-                </div>
-            </div>
+    <button class="btn btn-primary btn-sm" id="addTransactionBtn">
+        <i class="fas fa-plus"></i> <span>Add Transaction</span>
+    </button>
+
+    <!-- ── User chip: avatar + name + logout ── -->
+    <div id="user-chip" style="
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 6px 5px 14px;
+      background: rgba(30,41,59,0.7);
+      border: 1px solid #334155;
+      border-radius: 24px;
+      font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+      margin-left: 8px;
+    ">
+      <span id="user-name" style="
+        color:#F1F5F9; font-weight:600; font-size:13px;
+        max-width:120px; overflow:hidden;
+        text-overflow:ellipsis; white-space:nowrap;
+      ">Loading…</span>
+
+      <div id="user-avatar" style="
+        width: 30px; height: 30px; border-radius: 50%;
+        background: linear-gradient(135deg,#6366F1,#8B5CF6);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; color: #fff; font-size: 13px;
+      ">?</div>
+
+      <button id="logout-btn" style="
+        background: none; border: none; cursor: pointer;
+        color: #94A3B8; font-size: 12px;
+        padding: 4px 10px 4px 10px;
+        border-left: 1px solid #334155;
+        font-family: inherit;
+      ">Logout</button>
+    </div>
+</div>
         </header>
 
         <!-- Page Content -->
@@ -411,5 +461,85 @@
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 <script src="{{ url_for('static', filename='js/reports.js') }}"></script>
 <script src="{{ url_for('static', filename='js/risk.js') }}"></script>
+        <!-- your existing scripts stay here -->
+
+        <!-- ═══ BOOTSTRAP — PASTED HERE (LAST) ═══ -->
+        <script>
+        (function () {
+          'use strict';
+
+          let CSRF_TOKEN = null;
+
+          const _originalFetch = window.fetch.bind(window);
+window.fetch = async function (url, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+    const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+
+    if (isMutating && CSRF_TOKEN) {
+        options.headers = Object.assign({}, options.headers, {
+            'X-CSRFToken': CSRF_TOKEN,
+        });
+    }
+
+    // ★ CRITICAL: Tell the browser to send cookies with every request
+    options.credentials = 'include';
+
+    const response = await _originalFetch(url, options);
+             if (response.status === 401) {
+              window.location.href = '/login';
+            }
+            return response;
+          };
+
+          async function loadCsrfToken() {
+            try {
+              const res = await _originalFetch('/api/csrf-token');
+              if (!res.ok) throw new Error('CSRF fetch failed');
+              CSRF_TOKEN = (await res.json()).csrf_token;
+              console.log('[FinTrack] CSRF loaded');
+            } catch (e) { console.error(e); }
+          }
+
+          async function loadUser() {
+            try {
+              const res = await _originalFetch('/api/me');
+              if (!res.ok) return;
+              const user = await res.json();
+              document.getElementById('user-name').textContent = user.full_name;
+              document.getElementById('user-avatar').textContent =
+                (user.full_name || user.username).charAt(0).toUpperCase();
+            } catch (e) { console.error(e); }
+          }
+
+          async function seedIfEmpty() {
+            if (sessionStorage.getItem('fintrack_seeded') === '1') return;
+            try {
+              await fetch('/api/seed', { method: 'POST' });
+              sessionStorage.setItem('fintrack_seeded', '1');
+            } catch (e) { console.error(e); }
+          }
+
+          async function handleLogout() {
+            if (!confirm('Log out?')) return;
+            try {
+              await fetch('/auth/logout', { method: 'POST' });
+              window.location.href = '/login';
+            } catch (e) { window.location.href = '/logout'; }
+          }
+
+          async function bootstrap() {
+            await loadCsrfToken();
+            await Promise.all([loadUser(), seedIfEmpty()]);
+            const btn = document.getElementById('logout-btn');
+            if (btn) btn.addEventListener('click', handleLogout);
+          }
+
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bootstrap);
+          } else {
+            bootstrap();
+          }
+        })();
+        </script>
 </body>
 </html>
