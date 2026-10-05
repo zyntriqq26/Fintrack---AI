@@ -88,12 +88,11 @@
                 <i class="fas fa-bars"></i>
             </button>
             <h1 class="page-title" id="pageTitle">Dashboard</h1>
-            <div class="top-bar-actions">
+           <div class="top-bar-actions">
     <button class="btn btn-primary btn-sm" id="addTransactionBtn">
         <i class="fas fa-plus"></i> <span>Add Transaction</span>
     </button>
 
-    <!-- ── User chip: avatar + name + logout ── -->
     <div id="user-chip" style="
       display: flex;
       align-items: center;
@@ -118,7 +117,7 @@
         font-weight: 700; color: #fff; font-size: 13px;
       ">?</div>
 
-      <button id="logout-btn" style="
+      <button id="logout-btn" type="button" style="
         background: none; border: none; cursor: pointer;
         color: #94A3B8; font-size: 12px;
         padding: 4px 10px 4px 10px;
@@ -463,83 +462,96 @@
 <script src="{{ url_for('static', filename='js/risk.js') }}"></script>
         <!-- your existing scripts stay here -->
 
-        <!-- ═══ BOOTSTRAP — PASTED HERE (LAST) ═══ -->
         <script>
-        (function () {
-          'use strict';
+(function () {
+  'use strict';
 
-          let CSRF_TOKEN = null;
+  let CSRF_TOKEN = null;
 
-          const _originalFetch = window.fetch.bind(window);
-window.fetch = async function (url, options = {}) {
+  // ── Auto-inject CSRF token into all mutating requests ──
+  const _originalFetch = window.fetch.bind(window);
+  window.fetch = async function (url, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
     const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
     if (isMutating && CSRF_TOKEN) {
-        options.headers = Object.assign({}, options.headers, {
-            'X-CSRFToken': CSRF_TOKEN,
-        });
+      options.headers = Object.assign({}, options.headers, {
+        'X-CSRFToken': CSRF_TOKEN,
+      });
     }
 
-    // ★ CRITICAL: Tell the browser to send cookies with every request
+    // ★ Send cookies cross-origin (for phone via dev tunnels)
     options.credentials = 'include';
 
     const response = await _originalFetch(url, options);
-             if (response.status === 401) {
-              window.location.href = '/login';
-            }
-            return response;
-          };
 
-          async function loadCsrfToken() {
-            try {
-              const res = await _originalFetch('/api/csrf-token');
-              if (!res.ok) throw new Error('CSRF fetch failed');
-              CSRF_TOKEN = (await res.json()).csrf_token;
-              console.log('[FinTrack] CSRF loaded');
-            } catch (e) { console.error(e); }
-          }
+    if (response.status === 401) {
+      window.location.href = '/login';
+    }
+    return response;
+  };
 
-          async function loadUser() {
-            try {
-              const res = await _originalFetch('/api/me');
-              if (!res.ok) return;
-              const user = await res.json();
-              document.getElementById('user-name').textContent = user.full_name;
-              document.getElementById('user-avatar').textContent =
-                (user.full_name || user.username).charAt(0).toUpperCase();
-            } catch (e) { console.error(e); }
-          }
+  // ── Load CSRF token ──
+  async function loadCsrfToken() {
+    try {
+      const res = await _originalFetch('/api/csrf-token');
+      if (!res.ok) throw new Error('CSRF fetch failed');
+      CSRF_TOKEN = (await res.json()).csrf_token;
+      console.log('[FinTrack] CSRF loaded');
+    } catch (e) {
+      console.error('[FinTrack] CSRF load failed:', e);
+    }
+  }
 
-          async function seedIfEmpty() {
-            if (sessionStorage.getItem('fintrack_seeded') === '1') return;
-            try {
-              await fetch('/api/seed', { method: 'POST' });
-              sessionStorage.setItem('fintrack_seeded', '1');
-            } catch (e) { console.error(e); }
-          }
+  // ── Load current user ──
+  async function loadUser() {
+    try {
+      const res = await _originalFetch('/api/me');
+      if (!res.ok) return;
+      const user = await res.json();
 
-          async function handleLogout() {
-            if (!confirm('Log out?')) return;
-            try {
-              await fetch('/auth/logout', { method: 'POST' });
-              window.location.href = '/login';
-            } catch (e) { window.location.href = '/logout'; }
-          }
+      const nameEl   = document.getElementById('user-name');
+      const avatarEl = document.getElementById('user-avatar');
 
-          async function bootstrap() {
-            await loadCsrfToken();
-            await Promise.all([loadUser(), seedIfEmpty()]);
-            const btn = document.getElementById('logout-btn');
-            if (btn) btn.addEventListener('click', handleLogout);
-          }
+      if (nameEl) {
+        nameEl.textContent = user.full_name || user.username;
+      }
+      if (avatarEl) {
+        avatarEl.textContent = (user.full_name || user.username)
+          .charAt(0).toUpperCase();
+      }
+    } catch (e) {
+      console.error('[FinTrack] User load failed:', e);
+    }
+  }
 
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', bootstrap);
-          } else {
-            bootstrap();
-          }
-        })();
-        </script>
+  // ── Logout handler ──
+  function handleLogout() {
+    if (!confirm('Are you sure you want to log out?')) return;
+    // GET request — the backend route accepts GET only
+    window.location.href = '/logout';
+}
+
+  // ── Wire everything up after DOM is ready ──
+  function bootstrap() {
+    loadCsrfToken();
+    loadUser();
+
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', handleLogout);
+      console.log('[FinTrack] Logout button wired');
+    } else {
+      console.warn('[FinTrack] #logout-btn not found!');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrap);
+  } else {
+    bootstrap();
+  }
+})();
+</script>
 </body>
 </html>
